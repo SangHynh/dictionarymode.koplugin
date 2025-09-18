@@ -95,39 +95,41 @@ function DictionaryMode:cleanupSelectedText(text)
     return text
 end
 
-function DictionaryMode:onTap(_, ges)
-    local disabled = G_reader_settings:nilOrFalse("enable_dictionary_mode")
+function DictionaryMode:registerTap()
+    local content_left = self.view.content_left or 0
+    local content_right = self.view.content_right or self.view.full_width
+    local screen_width = self.view.full_width
 
-    if disabled then
-        return false
-    end
+    local ratio_x = content_left / screen_width
+    local ratio_w = (content_right - content_left) / screen_width
 
-    local pos = self.view:screenToPageTransform(ges.pos)
-    local selection = self.ui.document:getTextFromPositions(pos, pos)
-
-    if not selection then
-        return false
-    end
-
-    if string.find(selection.text, " ") then
-        return false
-    end
-
-    if self.ui.languagesupport and self.ui.languagesupport:hasActiveLanguagePlugins() then
-        -- If this is a language where pan-less word selection needs some
-        -- extra work above and beyond what the document engine gives us
-        -- from getWordFromPosition, call the relevant language-specific
-        -- plugin.
-        local new_selection = self.ui.languagesupport:improveWordSelection(selection)
-        if new_selection then
-            selection = new_selection
-        end
-    end
-
-    self.ui:handleEvent(Event:new("LookupWord", self:cleanupSelectedText(selection.text)))
-    self.ui.document:clearSelection()
-
-    return true
+    self.ui:registerTouchZones({
+        {
+            id = "dictionarymode_tap",
+            ges = "tap",
+            screen_zone = {
+                ratio_x = ratio_x,
+                ratio_y = 0,
+                ratio_w = ratio_w,
+                ratio_h = 1,
+            },
+            overrides = {
+                "readerhighlight_tap",
+                "tap_top_left_corner",
+                "tap_top_right_corner",
+                "tap_left_bottom_corner",
+                "tap_right_bottom_corner",
+                "readerfooter_tap",
+                "readerconfigmenu_ext_tap",
+                "readerconfigmenu_tap",
+                "readermenu_ext_tap",
+                "readermenu_tap",
+                "tap_forward",
+                "tap_backward",
+            },
+            handler = function(ges) return self:onTap(nil, ges) end
+        },
+    })
 end
 
 return DictionaryMode
